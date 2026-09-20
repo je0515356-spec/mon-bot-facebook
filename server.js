@@ -5,9 +5,9 @@ app.use(express.json());
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "382817100Eric.";
-const API_KEY = process.env.GEMINI_API_KEY; // Votre clé OpenRouter (sk-or-v1-...)
+const API_KEY = process.env.GEMINI_API_KEY; // Clé OpenRouter
 
-// 1. Vérification Facebook
+// 1. Vérification Facebook Webhook
 app.get('/webhook', (req, res) => {
     if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === VERIFY_TOKEN) {
         res.status(200).send(req.query['hub.challenge']);
@@ -16,7 +16,7 @@ app.get('/webhook', (req, res) => {
     }
 });
 
-// 2. Réception des messages
+// 2. Réception des messages Messenger
 app.post('/webhook', async (req, res) => {
     const body = req.body;
     if (body.object === 'page') {
@@ -39,39 +39,51 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA OpenRouter (Modèle Gratuit & Intelligent en Malgache)
+// 3. IA OpenRouter (Modèles 100% Gratuits)
 async function callAI(userPrompt) {
-    try {
-        const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
+    const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
 Fitsipika:
 - Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
 - Vokatra: T-shirt = 25 000 Ar, Patalloha Jean = 45 000 Ar, Kiraro = 60 000 Ar.
 - Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
 - Livraison: 3 000 Ar eto Antananarivo.
-- Raha manome taille na loko ny mpanjifa (ohatra: Taille L), valio amin'ny fomba mavitrika hoe misy io ary anontanio ny anarany sy ny findainy handefasana azy.`;
+- Raha manontany patalloha na vidiny ny mpanjifa dia valio mazava tsara ary anontanio ny taille sy ny adiresiny.`;
 
-        const response = await axios.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            {
-                model: 'meta-llama/llama-3.3-70b-instruct:free',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ]
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${API_KEY}`,
-                    'Content-Type': 'application/json'
+    // Liste des modèles gratuits sur OpenRouter
+    const freeModels = [
+        'google/gemini-2.0-flash-exp:free',
+        'deepseek/deepseek-r1:free',
+        'meta-llama/llama-3.1-8b-instruct:free'
+    ];
+
+    for (let modelName of freeModels) {
+        try {
+            const response = await axios.post(
+                'https://openrouter.ai/api/v1/chat/completions',
+                {
+                    model: modelName,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ]
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            }
-        );
+            );
 
-        return response.data.choices[0].message.content;
-    } catch (error) {
-        console.error("Détail Erreur IA:", error.response ? error.response.data : error.message);
-        return "Manao ahoana tompoko ! Misy entana maro mahaliana ato aminay. Inona no tadiavinao ?";
+            if (response.data && response.data.choices && response.data.choices[0].message) {
+                return response.data.choices[0].message.content;
+            }
+        } catch (error) {
+            console.log(`Modèle ${modelName} indisponible, essai du suivant...`);
+        }
     }
+
+    return "Manao ahoana tompoko ! Misy patalloha tsara kalitao tokoa ato aminay amin'ny vidiny 45 000 Ar. Inona ny taille tadiavinao ?";
 }
 
 // 4. Envoi Messenger
@@ -81,6 +93,7 @@ async function sendTextMessage(recipientId, text) {
             recipient: { id: recipientId },
             message: { text: text }
         });
+        console.log("Message envoyé au client sur Messenger !");
     } catch (e) {
         console.error("Erreur Messenger:", e.response ? e.response.data : e.message);
     }
