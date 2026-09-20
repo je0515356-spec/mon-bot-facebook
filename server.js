@@ -1,29 +1,23 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
-const pino = require('pino');
 const express = require('express');
-const QRCode = require('qrcode');
 const axios = require('axios');
-const fs = require('fs');
-
 const app = express();
+
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 const PORT = process.env.PORT || 3000;
 const GROQ_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
-
-let qrCodeData = "";
-let isConnected = false;
-let sock = null;
-const conversationMemory = {};
 
 // =========================================================================
 // 📝 PROMPT COMMERCIAL VRAIE IA (E-VAROTRA INFORMATIQUE)
 // =========================================================================
-const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra tena mahay sy maharesy lahatra amin'ny WhatsApp ho an'ny "E-Varotra Informatique" (Imandry Fianarantsoa).
+const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra tena mahay sy maharesy lahatra amin'ny "E-Varotra Informatique" (Imandry Fianarantsoa).
 
 🏢 MOMBA NY BOUTIQUE SY NY FANDOAVAM-BOLA:
 - Toerana fiaingana / Point de Récupération: Imandry Fianarantsoa (arrêt bus carrière).
   * Raha ho avy haka entana eo Imandry ny mpanjifa: lazao azy hoe maimaim-poana ny fakana azy ary miantso ny 038 28 171 00 (Jean Eric) rehefa tonga eo amin'ny arrêt bus carrière mba handraisana azy sy hitsapana (test) ny entana eo no ho eo.
 - Livraison: 2 000 Ar eto Fianarantsoa Ville 🛵. Mandefa any amin'ny province amin'ny fiara taxi-brousse / poste 📦.
-- MVola / WhatsApp: 038 28 171 00 (Anarana: Jean Eric) 📲.
+- MVola: 038 28 171 00 (Anarana: Jean Eric) 📲.
 - Garantie & SAV: Entana vaovao sy azo antoka, azo tsapaina sy testena tsara eo no ho eo alohan'ny handoavana vola, ary misy SAV manampy aorian'ny fividianana 🛡️.
 
 📦 CATALOGUE PRODUITS:
@@ -40,15 +34,17 @@ const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra tena mahay sy maha
 1. Valio fohy, mazava, feno fanajana (mampiasa 'tompoko') sy emojis (😊, 📶, 🛵).
 2. Anontanio avy hatrany: "Haterina amin'ny livraison eto Fianarantsoa ville ve (2 000 Ar) 🛵 sa ho avy haka mivantana eo Imandry (Maimaim-poana) 📍 sa alefa province 📦?"
 3. Raha efa feno ny mombamomba azy (Anarana, Finday, Quartier), VALIDEO avy hatrany ny kaomandy miaraka amin'ny totalin'ny vola aloa!`;
-// =========================================================================
 
-// 🧠 IA Groq
-async function callGroqAI(userId, userPrompt) {
-    if (!conversationMemory[userId]) conversationMemory[userId] = [];
-    conversationMemory[userId].push({ role: 'user', content: userPrompt });
-    if (conversationMemory[userId].length > 8) conversationMemory[userId] = conversationMemory[userId].slice(-8);
+// 🧠 Appel IA Groq
+app.post('/api/chat', async (req, res) => {
+    const { message, history } = req.body;
+    
+    let messagesToSend = [{ role: 'system', content: SYSTEM_PROMPT }];
+    if (history && Array.isArray(history)) {
+        messagesToSend = messagesToSend.concat(history.slice(-6));
+    }
+    messagesToSend.push({ role: 'user', content: message });
 
-    const messagesToSend = [{ role: 'system', content: SYSTEM_PROMPT }, ...conversationMemory[userId]];
     const myChatModels = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.8-27b'];
 
     for (let model of myChatModels) {
@@ -58,105 +54,102 @@ async function callGroqAI(userId, userPrompt) {
                 { model: model, messages: messagesToSend, temperature: 0.3 },
                 { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' } }
             );
+
             if (response.data && response.data.choices && response.data.choices[0].message) {
-                const reply = response.data.choices[0].message.content;
-                conversationMemory[userId].push({ role: 'assistant', content: reply });
-                return reply;
+                return res.json({ reply: response.data.choices[0].message.content });
             }
         } catch (e) {}
     }
-    return "Manao ahoana tompoko ! 😊 Misy entana informatique maro ato amin'ny E-Varotra Informatique. Inona no tadiavinao ? ✨";
-}
 
-// 🌐 Affichage du QR Code sur la page Web
-app.get('/', async (req, res) => {
-    if (isConnected) {
-        res.send(`<div style="text-align:center;font-family:sans-serif;padding:50px;">
-            <h1 style="color:#25D366;font-size:32px;">✅ WhatsApp est Connecté et Actif !</h1>
-            <p style="font-size:18px;">Votre robot IA répond automatiquement aux clients sur WhatsApp 24h/24.</p>
-        </div>`);
-    } else if (qrCodeData) {
-        const qrImage = await QRCode.toDataURL(qrCodeData);
-        res.send(`<div style="text-align:center;font-family:sans-serif;padding:30px;">
-            <h2 style="color:#075E54;">📱 Scannez ce QR Code avec WhatsApp</h2>
-            <p style="font-size:16px;">Ouvrez WhatsApp sur votre téléphone > <b>Appareils connectés</b> > <b>Connecter un appareil</b></p>
-            <div style="margin:20px auto;display:inline-block;padding:15px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.15);">
-                <img src="${qrImage}" style="width:300px;height:300px;display:block;"/>
+    res.json({ reply: "Manao ahoana tompoko ! 😊 Misy fitaovana informatique maro ato amin'ny E-Varotra Informatique. Inona no tadiavinao ? ✨" });
+});
+
+// 🌐 Interface Web Mobile Style WhatsApp
+app.get('/', (req, res) => {
+    res.send(`
+<!DOCTYPE html>
+<html lang="mg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>E-Varotra Informatique - Vendeur IA</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #e5ddd5; display: flex; justify-content: center; height: 100vh; }
+        .chat-container { width: 100%; max-width: 480px; background: #efeae2; display: flex; flex-direction: column; height: 100%; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .header { background: #075e54; color: white; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+        .header .avatar { width: 42px; height: 42px; background: #25d366; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .header .info h2 { font-size: 16px; }
+        .header .info p { font-size: 12px; color: #dcf8c6; }
+        .messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 80%; padding: 10px 14px; border-radius: 8px; font-size: 14px; line-height: 1.4; word-wrap: break-word; }
+        .msg.bot { background: white; align-self: flex-start; border-top-left-radius: 0; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .msg.user { background: #dcf8c6; align-self: flex-end; border-top-right-radius: 0; box-shadow: 0 1px 1px rgba(0,0,0,0.1); }
+        .input-area { background: #f0f0f0; padding: 10px; display: flex; gap: 8px; align-items: center; }
+        .input-area input { flex: 1; padding: 12px 16px; border: none; border-radius: 24px; outline: none; font-size: 15px; background: white; }
+        .input-area button { background: #075e54; color: white; border: none; width: 44px; height: 44px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <div class="avatar">🛒</div>
+            <div class="info">
+                <h2>E-Varotra Informatique</h2>
+                <p>🟢 Vendeur IA en ligne (Fianarantsoa)</p>
             </div>
-            <p style="color:#666;"><i>La page s'actualise automatiquement.</i></p>
-            <script>setTimeout(() => location.reload(), 15000);</script>
-        </div>`);
-    } else {
-        res.send(`<div style="text-align:center;font-family:sans-serif;padding:50px;">
-            <h2>⏳ Génération du QR Code en cours...</h2>
-            <p>Veuillez patienter quelques secondes...</p>
-            <script>setTimeout(() => location.reload(), 4000);</script>
-        </div>`);
-    }
-});
+        </div>
+        <div class="messages" id="chatBox">
+            <div class="msg bot">Manao ahoana tompoko ! 😊 Tongasoa eto amin'ny E-Varotra Informatique (Imandry Fianarantsoa). Inona no fitaovana informatique tadiavinao androany ? ✨</div>
+        </div>
+        <form class="input-area" id="chatForm">
+            <input type="text" id="userInput" placeholder="Soraty eto ny hafatrao..." autocomplete="off" required />
+            <button type="submit">➤</button>
+        </form>
+    </div>
 
-// 🤖 Lancement WhatsApp avec reconnexion sécurisée
-async function startWhatsApp() {
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-        
-        sock = makeWASocket({
-            auth: state,
-            logger: pino({ level: 'silent' }),
-            printQRInTerminal: false,
-            browser: Browsers.macOS('Desktop'),
-            connectTimeoutMs: 60000,
-            defaultQueryTimeoutMs: 60000,
-            keepAliveIntervalMs: 10000
-        });
+    <script>
+        const chatBox = document.getElementById('chatBox');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        let history = [];
 
-        sock.ev.on('creds.update', saveCreds);
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = userInput.value.trim();
+            if (!text) return;
 
-        sock.ev.on('connection.update', (update) => {
-            const { connection, lastDisconnect, qr } = update;
-            
-            if (qr) {
-                qrCodeData = qr;
-                console.log("⚡ QR Code prêt ! Ouvrez votre lien Render pour le scanner.");
-            }
+            // Message utilisateur
+            chatBox.innerHTML += '<div class="msg user">' + text + '</div>';
+            userInput.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
 
-            if (connection === 'close') {
-                const statusCode = (lastDisconnect?.error)?.output?.statusCode;
-                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
-                isConnected = false;
-                console.log(`Connexion fermée (code: ${statusCode}). Reconnexion dans 5s...`);
+            // Message temporaire de chargement
+            const loadingId = 'loading-' + Date.now();
+            chatBox.innerHTML += '<div class="msg bot" id="' + loadingId + '"><i>Eo am-panoratana... ⏳</i></div>';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const res = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text, history: history })
+                });
+                const data = await res.json();
                 
-                if (shouldReconnect) {
-                    setTimeout(() => startWhatsApp(), 5000);
-                }
-            } else if (connection === 'open') {
-                isConnected = true;
-                qrCodeData = "";
-                console.log("🎉 WhatsApp Connecté avec succès ! Le bot IA est prêt !");
+                document.getElementById(loadingId).remove();
+                chatBox.innerHTML += '<div class="msg bot">' + data.reply.replace(/\\n/g, '<br>') + '</div>';
+                history.push({ role: 'user', content: text });
+                history.push({ role: 'assistant', content: data.reply });
+            } catch (err) {
+                document.getElementById(loadingId).innerText = "Miala tsiny tompoko, nisy olana kely ny fifandraisana.";
             }
+            chatBox.scrollTop = chatBox.scrollHeight;
         });
-
-        sock.ev.on('messages.upsert', async (m) => {
-            const msg = m.messages[0];
-            if (!msg.key.fromMe && m.type === 'notify') {
-                const from = msg.key.remoteJid;
-                const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
-                if (text && !from.includes('@g.us')) {
-                    console.log(`--- 📩 MESSAGE WHATSAPP REÇU : ${text}`);
-                    const aiReply = await callGroqAI(from, text);
-                    console.log(`--- 🤖 REPONSE IA : ${aiReply}`);
-                    await sock.sendMessage(from, { text: aiReply });
-                }
-            }
-        });
-    } catch (err) {
-        console.error("Erreur lancement WhatsApp :", err.message);
-        setTimeout(() => startWhatsApp(), 5000);
-    }
-}
-
-app.listen(PORT, () => {
-    console.log(`Serveur prêt sur le port ${PORT}`);
-    startWhatsApp();
+    </script>
+</body>
+</html>
+    `);
 });
+
+app.listen(PORT, () => console.log(`Boutique IA en ligne sur le port ${PORT}`));
