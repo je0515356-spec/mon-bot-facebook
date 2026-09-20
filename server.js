@@ -1,8 +1,9 @@
-const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 const QRCode = require('qrcode');
 const axios = require('axios');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,6 +11,7 @@ const GROQ_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.tri
 
 let qrCodeData = "";
 let isConnected = false;
+let sock = null;
 const conversationMemory = {};
 
 // =========================================================================
@@ -40,7 +42,7 @@ const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra tena mahay sy maha
 3. Raha efa feno ny mombamomba azy (Anarana, Finday, Quartier), VALIDEO avy hatrany ny kaomandy miaraka amin'ny totalin'ny vola aloa!`;
 // =========================================================================
 
-// 🧠 Appel IA Groq
+// 🧠 IA Groq
 async function callGroqAI(userId, userPrompt) {
     if (!conversationMemory[userId]) conversationMemory[userId] = [];
     conversationMemory[userId].push({ role: 'user', content: userPrompt });
@@ -66,80 +68,95 @@ async function callGroqAI(userId, userPrompt) {
     return "Manao ahoana tompoko ! 😊 Misy entana informatique maro ato amin'ny E-Varotra Informatique. Inona no tadiavinao ? ✨";
 }
 
-// 🌐 Page Web pour scanner le QR Code
+// 🌐 Affichage du QR Code sur la page Web
 app.get('/', async (req, res) => {
     if (isConnected) {
         res.send(`<div style="text-align:center;font-family:sans-serif;padding:50px;">
-            <h1 style="color:green;">✅ WhatsApp est Connecté et Actif !</h1>
-            <p>Votre robot IA répond désormais automatiquement sur WhatsApp 24h/24.</p>
+            <h1 style="color:#25D366;font-size:32px;">✅ WhatsApp est Connecté et Actif !</h1>
+            <p style="font-size:18px;">Votre robot IA répond automatiquement aux clients sur WhatsApp 24h/24.</p>
         </div>`);
     } else if (qrCodeData) {
         const qrImage = await QRCode.toDataURL(qrCodeData);
         res.send(`<div style="text-align:center;font-family:sans-serif;padding:30px;">
-            <h2>📱 Scannez ce QR Code avec WhatsApp</h2>
-            <p>Ouvrez WhatsApp sur votre téléphone > <b>Appareils connectés</b> > <b>Connecter un appareil</b></p>
-            <img src="${qrImage}" style="width:300px;height:300px;border:2px solid #333;border-radius:10px;"/>
-            <p><i>La page s'actualise automatiquement toutes les 15 secondes.</i></p>
+            <h2 style="color:#075E54;">📱 Scannez ce QR Code avec WhatsApp</h2>
+            <p style="font-size:16px;">Ouvrez WhatsApp sur votre téléphone > <b>Appareils connectés</b> > <b>Connecter un appareil</b></p>
+            <div style="margin:20px auto;display:inline-block;padding:15px;background:#fff;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.15);">
+                <img src="${qrImage}" style="width:300px;height:300px;display:block;"/>
+            </div>
+            <p style="color:#666;"><i>La page s'actualise automatiquement.</i></p>
             <script>setTimeout(() => location.reload(), 15000);</script>
         </div>`);
     } else {
         res.send(`<div style="text-align:center;font-family:sans-serif;padding:50px;">
-            <h2>⏳ Démarrage du serveur WhatsApp...</h2>
-            <p>Veuillez patienter 10 secondes et actualiser la page.</p>
-            <script>setTimeout(() => location.reload(), 5000);</script>
+            <h2>⏳ Génération du QR Code en cours...</h2>
+            <p>Veuillez patienter quelques secondes...</p>
+            <script>setTimeout(() => location.reload(), 4000);</script>
         </div>`);
     }
 });
 
-// 🤖 Connexion WhatsApp Baileys
+// 🤖 Lancement WhatsApp avec reconnexion sécurisée
 async function startWhatsApp() {
-    const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
-    const sock = makeWASocket({
-        auth: state,
-        logger: pino({ level: 'silent' }),
-        printQRInTerminal: false
-    });
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState('auth_info_baileys');
+        
+        sock = makeWASocket({
+            auth: state,
+            logger: pino({ level: 'silent' }),
+            printQRInTerminal: false,
+            browser: Browsers.macOS('Desktop'),
+            connectTimeoutMs: 60000,
+            defaultQueryTimeoutMs: 60000,
+            keepAliveIntervalMs: 10000
+        });
 
-    sock.ev.on('creds.update', saveCreds);
+        sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect, qr } = update;
-        if (qr) {
-            qrCodeData = qr;
-            console.log("⚡ Nouveau QR Code généré ! Ouvrez votre lien Render pour le scanner.");
-        }
-        if (connection === 'close') {
-            const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-            isConnected = false;
-            if (shouldReconnect) {
-                console.log("Connexion fermée, reconnexion...");
-                startWhatsApp();
+        sock.ev.on('connection.update', (update) => {
+            const { connection, lastDisconnect, qr } = update;
+            
+            if (qr) {
+                qrCodeData = qr;
+                console.log("⚡ QR Code prêt ! Ouvrez votre lien Render pour le scanner.");
             }
-        } else if (connection === 'open') {
-            isConnected = true;
-            qrCodeData = "";
-            console.log("🎉 WhatsApp Connecté avec succès ! Le bot IA est prêt !");
-        }
-    });
 
-    // Réception des messages WhatsApp
-    sock.ev.on('messages.upsert', async (m) => {
-        const msg = m.messages[0];
-        if (!msg.key.fromMe && m.type === 'notify') {
-            const from = msg.key.remoteJid;
-            const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
-
-            if (text && !from.includes('@g.us')) { // Pas de réponse dans les groupes
-                console.log(`--- 📩 MESSAGE WHATSAPP DE [${from}] : ${text}`);
-                const aiReply = await callGroqAI(from, text);
-                console.log(`--- 🤖 REPONSE IA ENVOYÉE : ${aiReply}`);
-                await sock.sendMessage(from, { text: aiReply });
+            if (connection === 'close') {
+                const statusCode = (lastDisconnect?.error)?.output?.statusCode;
+                const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+                isConnected = false;
+                console.log(`Connexion fermée (code: ${statusCode}). Reconnexion dans 5s...`);
+                
+                if (shouldReconnect) {
+                    setTimeout(() => startWhatsApp(), 5000);
+                }
+            } else if (connection === 'open') {
+                isConnected = true;
+                qrCodeData = "";
+                console.log("🎉 WhatsApp Connecté avec succès ! Le bot IA est prêt !");
             }
-        }
-    });
+        });
+
+        sock.ev.on('messages.upsert', async (m) => {
+            const msg = m.messages[0];
+            if (!msg.key.fromMe && m.type === 'notify') {
+                const from = msg.key.remoteJid;
+                const text = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+
+                if (text && !from.includes('@g.us')) {
+                    console.log(`--- 📩 MESSAGE WHATSAPP REÇU : ${text}`);
+                    const aiReply = await callGroqAI(from, text);
+                    console.log(`--- 🤖 REPONSE IA : ${aiReply}`);
+                    await sock.sendMessage(from, { text: aiReply });
+                }
+            }
+        });
+    } catch (err) {
+        console.error("Erreur lancement WhatsApp :", err.message);
+        setTimeout(() => startWhatsApp(), 5000);
+    }
 }
 
 app.listen(PORT, () => {
-    console.log(`Serveur actif sur le port ${PORT}`);
+    console.log(`Serveur prêt sur le port ${PORT}`);
     startWhatsApp();
 });
