@@ -39,10 +39,9 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA Groq (Llama 3.3 70B - Gratuit, Ultra Rapide & Intelligent en Malgache)
+// 3. IA Groq (Modèles actifs et gratuits)
 async function callGroqAI(userPrompt) {
-    try {
-        const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook "E-Varotra Informatique" eto Madagasikara.
+    const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook "E-Varotra Informatique" eto Madagasikara.
 Fitsipika:
 - Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
 - Vokatra misy: 
@@ -50,32 +49,45 @@ Fitsipika:
   * Patalloha Jean = 45 000 Ar (misy taille S, M, L, XL)
   * Kiraro = 60 000 Ar (pointure 38 hatramin'ny 44)
 - Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
-- Livraison: 3 000 Ar eto Antananarivo (1 hatramin'ny 2 andro).
-- Valio manokana sy mazava tsara araka ny zavatra anontanian'ny mpanjifa (aza mamerina valinteny mitovy). Raha hanome taille izy, lazao fa misy io ary anontanio ny anarany sy ny findainy.`;
+- Livraison: 3 000 Ar eto Antananarivo.
+- Valio manokana sy mazava tsara araka ny zavatra anontanian'ny mpanjifa. Aza mamerina foana ny lisitra manontolo fa valio izay tadiaviny, ary anontanio ny anarany sy ny findainy raha hividy izy.`;
 
-        const response = await axios.post(
-            'https://api.groq.com/openai/v1/chat/completions',
-            {
-                model: 'llama-3.3-70b-versatile',
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: userPrompt }
-                ],
-                temperature: 0.7
-            },
-            {
-                headers: {
-                    'Authorization': `Bearer ${GROQ_API_KEY}`,
-                    'Content-Type': 'application/json'
+    // Liste des modèles actifs sur Groq
+    const groqModels = [
+        'llama-3.1-8b-instant',
+        'mixtral-8x7b-32768',
+        'gemma2-9b-it'
+    ];
+
+    for (let modelName of groqModels) {
+        try {
+            const response = await axios.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                {
+                    model: modelName,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userPrompt }
+                    ],
+                    temperature: 0.7
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${GROQ_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            }
-        );
+            );
 
-        return response.data.choices[0].message.content;
-    } catch (error) {
-        console.error("Erreur Groq:", error.response ? error.response.data : error.message);
-        return "Manao ahoana tompoko ! Misy olana kely ny fifandraisana. Avereno azafady.";
+            if (response.data && response.data.choices && response.data.choices[0].message) {
+                return response.data.choices[0].message.content;
+            }
+        } catch (error) {
+            console.log(`Modèle ${modelName} indisponible, essai du suivant...`);
+        }
     }
+
+    return "Manao ahoana tompoko ! Misy patalloha sy kiraro tsara kalitao tokoa ato aminay. Inona no tadiavinao ?";
 }
 
 // 4. Envoi Messenger
