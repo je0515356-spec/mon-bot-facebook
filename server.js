@@ -5,7 +5,7 @@ app.use(express.json());
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "382817100Eric.";
-const API_KEY = process.env.GEMINI_API_KEY; // Clé OpenRouter
+const GROQ_API_KEY = process.env.GEMINI_API_KEY; // Clé Groq (gsk_...)
 
 // 1. Vérification Facebook Webhook
 app.get('/webhook', (req, res) => {
@@ -27,7 +27,7 @@ app.post('/webhook', async (req, res) => {
 
                 if (event.message && event.message.text && !event.message.is_echo) {
                     console.log("Message client :", event.message.text);
-                    const botResponse = await callAI(event.message.text);
+                    const botResponse = await callGroqAI(event.message.text);
                     console.log("Réponse IA :", botResponse);
                     await sendTextMessage(sender_psid, botResponse);
                 }
@@ -39,53 +39,43 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA OpenRouter avec En-têtes Obligatoires
-async function callAI(userPrompt) {
-    const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
+// 3. IA Groq (Llama 3.3 70B - Gratuit, Ultra Rapide & Intelligent en Malgache)
+async function callGroqAI(userPrompt) {
+    try {
+        const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook "E-Varotra Informatique" eto Madagasikara.
 Fitsipika:
 - Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
-- Vokatra: T-shirt = 25 000 Ar, Patalloha Jean = 45 000 Ar, Kiraro = 60 000 Ar.
+- Vokatra misy: 
+  * T-shirt = 25 000 Ar
+  * Patalloha Jean = 45 000 Ar (misy taille S, M, L, XL)
+  * Kiraro = 60 000 Ar (pointure 38 hatramin'ny 44)
 - Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
-- Livraison: 3 000 Ar eto Antananarivo.
-- Valio mazava tsara ny fanontanian'ny mpanjifa ary anontanio ny anarany sy ny findainy raha hividy izy.`;
+- Livraison: 3 000 Ar eto Antananarivo (1 hatramin'ny 2 andro).
+- Valio manokana sy mazava tsara araka ny zavatra anontanian'ny mpanjifa (aza mamerina valinteny mitovy). Raha hanome taille izy, lazao fa misy io ary anontanio ny anarany sy ny findainy.`;
 
-    const freeModels = [
-        'deepseek/deepseek-chat:free',
-        'google/gemini-2.0-flash-exp:free',
-        'qwen/qwen-2.5-72b-instruct:free',
-        'mistralai/mistral-7b-instruct:free'
-    ];
-
-    for (let modelName of freeModels) {
-        try {
-            const response = await axios.post(
-                'https://openrouter.ai/api/v1/chat/completions',
-                {
-                    model: modelName,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ]
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${API_KEY}`,
-                        'HTTP-Referer': 'https://render.com', // Obligatoire pour OpenRouter Gratuit
-                        'X-Title': 'FacebookBotMadagascar',   // Obligatoire pour OpenRouter Gratuit
-                        'Content-Type': 'application/json'
-                    }
+        const response = await axios.post(
+            'https://api.groq.com/openai/v1/chat/completions',
+            {
+                model: 'llama-3.3-70b-versatile',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ],
+                temperature: 0.7
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${GROQ_API_KEY}`,
+                    'Content-Type': 'application/json'
                 }
-            );
-
-            if (response.data && response.data.choices && response.data.choices[0].message) {
-                return response.data.choices[0].message.content;
             }
-        } catch (error) {
-            console.log(`Erreur modèle ${modelName} :`, error.response ? error.response.data : error.message);
-        }
-    }
+        );
 
-    return "Manao ahoana tompoko ! Misy entana maro mahaliana ato aminay. Inona no tadiavinao ?";
+        return response.data.choices[0].message.content;
+    } catch (error) {
+        console.error("Erreur Groq:", error.response ? error.response.data : error.message);
+        return "Manao ahoana tompoko ! Misy olana kely ny fifandraisana. Avereno azafady.";
+    }
 }
 
 // 4. Envoi Messenger
@@ -95,11 +85,11 @@ async function sendTextMessage(recipientId, text) {
             recipient: { id: recipientId },
             message: { text: text }
         });
-        console.log("Message envoyé avec succès !");
+        console.log("Message envoyé avec succès au client !");
     } catch (e) {
         console.error("Erreur Messenger:", e.response ? e.response.data : e.message);
     }
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Serveur prêt sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`Serveur Groq prêt sur le port ${PORT}`));
