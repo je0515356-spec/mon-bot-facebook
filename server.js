@@ -5,7 +5,7 @@ app.use(express.json());
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "382817100Eric.";
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = process.env.GEMINI_API_KEY; // Votre clé OpenRouter (sk-or-v1-...)
 
 // 1. Vérification Facebook
 app.get('/webhook', (req, res) => {
@@ -16,7 +16,7 @@ app.get('/webhook', (req, res) => {
     }
 });
 
-// 2. Réception des messages Messenger
+// 2. Réception des messages
 app.post('/webhook', async (req, res) => {
     const body = req.body;
     if (body.object === 'page') {
@@ -27,8 +27,8 @@ app.post('/webhook', async (req, res) => {
 
                 if (event.message && event.message.text && !event.message.is_echo) {
                     console.log("Message client :", event.message.text);
-                    const botResponse = await callGeminiAI(event.message.text);
-                    console.log("Réponse générée :", botResponse);
+                    const botResponse = await callAI(event.message.text);
+                    console.log("Réponse IA :", botResponse);
                     await sendTextMessage(sender_psid, botResponse);
                 }
             }
@@ -39,34 +39,39 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA Google Gemini (Modèle 2.0 Flash)
-async function callGeminiAI(userPrompt) {
-    const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
+// 3. IA OpenRouter (Modèle Gratuit & Intelligent en Malgache)
+async function callAI(userPrompt) {
+    try {
+        const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
 Fitsipika:
 - Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
-- Vokatra: T-shirt = 25 000 Ar, Patalloha = 45 000 Ar, Kiraro = 60 000 Ar.
-- Fandoavam-bola: MVola, Orange Money, na rehefa tonga ny entana.
+- Vokatra: T-shirt = 25 000 Ar, Patalloha Jean = 45 000 Ar, Kiraro = 60 000 Ar.
+- Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
 - Livraison: 3 000 Ar eto Antananarivo.
-- Raha hividy ny mpanjifa dia anontanio: Anarana, Laharana finday, ary Tanàna.`;
+- Raha manome taille na loko ny mpanjifa (ohatra: Taille L), valio amin'ny fomba mavitrika hoe misy io ary anontanio ny anarany sy ny findainy handefasana azy.`;
 
-    // Liste des modèles Google à tester
-    const models = ['gemini-2.0-flash', 'gemini-2.0-flash-exp', 'gemini-1.5-flash-002'];
-
-    for (let model of models) {
-        try {
-            const response = await axios.post(
-                `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
-                {
-                    contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\nMpanjifa: ${userPrompt}` }] }]
+        const response = await axios.post(
+            'https://openrouter.ai/api/v1/chat/completions',
+            {
+                model: 'meta-llama/llama-3.3-70b-instruct:free',
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userPrompt }
+                ]
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${API_KEY}`,
+                    'Content-Type': 'application/json'
                 }
-            );
-            return response.data.candidates[0].content.parts[0].text;
-        } catch (e) {
-            console.log(`Test modèle ${model} échoué, essai suivant...`);
-        }
-    }
+            }
+        );
 
-    return "Manao ahoana tompoko ! Misy patalloha tsara kalitao tokoa ato aminay amin'ny vidiny 45 000 Ar. Inona ny taille tadiavinao ?";
+        return response.data.choices[0].message.content;
+    } catch (error) {
+        console.error("Détail Erreur IA:", error.response ? error.response.data : error.message);
+        return "Manao ahoana tompoko ! Misy entana maro mahaliana ato aminay. Inona no tadiavinao ?";
+    }
 }
 
 // 4. Envoi Messenger
@@ -76,7 +81,6 @@ async function sendTextMessage(recipientId, text) {
             recipient: { id: recipientId },
             message: { text: text }
         });
-        console.log("Message envoyé au client sur Messenger !");
     } catch (e) {
         console.error("Erreur Messenger:", e.response ? e.response.data : e.message);
     }
