@@ -26,7 +26,7 @@ app.post('/webhook', async (req, res) => {
                 const sender_psid = event.sender.id;
 
                 if (event.message && event.message.text && !event.message.is_echo) {
-                    console.log("--- MESSAGE DU CLIENT :", event.message.text);
+                    console.log("--- MESSAGE CLIENT :", event.message.text);
                     const botResponse = await callGroqAI(event.message.text);
                     console.log("--- VRAIE REPONSE DE L'IA :", botResponse);
                     await sendTextMessage(sender_psid, botResponse);
@@ -39,7 +39,7 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA Groq avec sélection automatique du bon modèle
+// 3. IA Groq avec vos modèles exacts (GPT-OSS 120B / 20B & Qwen)
 async function callGroqAI(userPrompt) {
     const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook "E-Varotra Informatique" eto Madagasikara.
 Fitsipika:
@@ -50,17 +50,17 @@ Fitsipika:
   * Kiraro = 60 000 Ar (pointure 38 hatramin'ny 44)
 - Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
 - Livraison: 3 000 Ar eto Antananarivo.
-- Valio manokana sy mazava tsara ny mpanjifa araka izay tadiaviny. Raha manontany kiraro izy, lazao ny vidiny (60 000 Ar) sy ny pointure misy. Anontanio ny anarany sy ny findainy raha hividy izy.`;
+- Valio manokana sy fohy ary mazava tsara ny mpanjifa araka izay tadiaviny. Anontanio ny anarany sy ny findainy raha hividy izy.`;
 
-    // 1. Liste des modèles officiels Groq à tester
-    const standardModels = [
-        'llama3-8b-8192',
-        'llama3-70b-8192',
-        'mixtral-8x7b-32768',
-        'gemma2-9b-it'
+    // Vos modèles de discussion disponibles
+    const myChatModels = [
+        'openai/gpt-oss-120b',
+        'openai/gpt-oss-20b',
+        'qwen/qwen3.8-27b',
+        'allam-2-7b'
     ];
 
-    for (let model of standardModels) {
+    for (let model of myChatModels) {
         try {
             const response = await axios.post(
                 'https://api.groq.com/openai/v1/chat/completions',
@@ -84,40 +84,8 @@ Fitsipika:
                 return response.data.choices[0].message.content;
             }
         } catch (e) {
-            // Passe au modèle suivant
+            console.log(`Essai avec ${model} en cours...`);
         }
-    }
-
-    // 2. Détection dynamique automatique sur le compte Groq
-    try {
-        const listResp = await axios.get('https://api.groq.com/openai/v1/models', {
-            headers: { 'Authorization': `Bearer ${GROQ_API_KEY}` }
-        });
-        const available = listResp.data.data.map(m => m.id);
-        console.log("Modèles disponibles sur votre compte Groq :", available);
-
-        if (available.length > 0) {
-            const dynamicModel = available.find(m => m.includes('llama') || m.includes('mixtral')) || available[0];
-            const response = await axios.post(
-                'https://api.groq.com/openai/v1/chat/completions',
-                {
-                    model: dynamicModel,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userPrompt }
-                    ]
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${GROQ_API_KEY}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-            return response.data.choices[0].message.content;
-        }
-    } catch (err2) {
-        console.error("Erreur API Groq :", err2.response ? err2.response.data : err2.message);
     }
 
     return "Manao ahoana tompoko ! Misy patalloha sy kiraro tsara kalitao tokoa ato aminay. Inona no tadiavinao ?";
