@@ -4,7 +4,7 @@ const app = express();
 app.use(express.json());
 
 const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
-const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "mon_secret_123";
+const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "382817100Eric.";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // 1. Vérification Facebook Webhook
@@ -21,19 +21,22 @@ app.get('/webhook', (req, res) => {
     }
 });
 
-// 2. Réception des messages & commentaires
+// 2. Réception des événements Facebook
 app.post('/webhook', async (req, res) => {
     const body = req.body;
 
     if (body.object === 'page') {
         for (let entry of body.entry) {
+            
             // Messages Privés Messenger
             if (entry.messaging) {
                 const event = entry.messaging[0];
                 const sender_psid = event.sender.id;
 
                 if (event.message && event.message.text && !event.message.is_echo) {
+                    console.log("Message reçu :", event.message.text);
                     const botResponse = await callGeminiAI(event.message.text);
+                    console.log("Réponse IA :", botResponse);
                     await sendTextMessage(sender_psid, botResponse);
                 }
             }
@@ -46,9 +49,7 @@ app.post('/webhook', async (req, res) => {
                         const userComment = change.value.message;
 
                         if (change.value.from.id !== entry.id) {
-                            // Réponse publique sous le commentaire
                             await replyPublicComment(comment_id, "Manao ahoana tompoko ! Nandefasanay hafatra miafina (MP) ianao izao 😊");
-                            // Envoi du MP privé
                             const privateMessage = await callGeminiAI(`Mpanjifa naneho hevitra: "${userComment}". Valio amin'ny fomba fivarotana.`);
                             await sendPrivateReply(comment_id, privateMessage);
                         }
@@ -62,42 +63,47 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA Gemini en Malgache
+// 3. IA Gemini en Malgache (URL Officielle à jour)
 async function callGeminiAI(userPrompt) {
     try {
         const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
-Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
-Vokatra: T-shirt = 25 000 Ar, Patalloha = 45 000 Ar, Kiraro = 60 000 Ar.
-Paiement: MVola, Orange Money, na livraison.
-Livraison: 3 000 Ar eto Antananarivo.
-Anontanio anarana, finday, tanàna raha hividy izy.`;
+Fitsipika:
+- Mitenena foana amin'ny teny Malagasy (mampiasa 'tompoko').
+- Vokatra: T-shirt = 25 000 Ar, Patalloha = 45 000 Ar, Kiraro = 60 000 Ar.
+- Fandoavam-bola: MVola, Orange Money, na rehefa tonga ny entana (Paiement à la livraison).
+- Livraison: 3 000 Ar eto Antananarivo.
+- Raha hividy ny mpanjifa dia anontanio: Anarana, Laharana finday, ary Tanàna.`;
 
         const response = await axios.post(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-            { contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\nMpanjifa: ${userPrompt}` }] }] }
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+            {
+                contents: [{ role: "user", parts: [{ text: `${systemPrompt}\n\nMpanjifa: ${userPrompt}` }] }]
+            }
         );
         return response.data.candidates[0].content.parts[0].text;
     } catch (error) {
-        console.error("Erreur Gemini:", error.message);
-        return "Manao ahoana tompoko ! Miala tsiny, misy olana kely ny fifandraisana. Avereno azafady.";
+        console.error("Détail Erreur Gemini:", error.response ? error.response.data : error.message);
+        return "Manao ahoana tompoko ! Misy entana maro mahaliana ato aminay. Inona no tadiavinao ?";
     }
 }
 
-// Fonctions d'envois Facebook
+// 4. Envoi sur Messenger
 async function sendTextMessage(recipientId, text) {
     try {
         await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
             recipient: { id: recipientId },
             message: { text: text }
         });
-    } catch (e) { console.error("Err Messenger:", e.message); }
+        console.log("Message envoyé avec succès au client !");
+    } catch (e) {
+        console.error("Err Messenger:", e.response ? e.response.data : e.message);
+    }
 }
 
+// 5. Fonctions pour les commentaires
 async function replyPublicComment(commentId, message) {
     try {
-        await axios.post(`https://graph.facebook.com/v19.0/${commentId}/comments?access_token=${PAGE_ACCESS_TOKEN}`, {
-            message: message
-        });
+        await axios.post(`https://graph.facebook.com/v19.0/${commentId}/comments?access_token=${PAGE_ACCESS_TOKEN}`, { message });
     } catch (e) { console.error("Err Comm:", e.message); }
 }
 
@@ -105,7 +111,7 @@ async function sendPrivateReply(commentId, text) {
     try {
         await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
             recipient: { comment_id: commentId },
-            message: { text: text }
+            message: { text }
         });
     } catch (e) { console.error("Err Private Reply:", e.message); }
 }
