@@ -9,29 +9,21 @@ const PORT = process.env.PORT || 3000;
 const GROQ_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
 
 // =========================================================================
-// 📝 CERVEAU IA COMPLET - EXPERT MIKROTECK 301 & E-VAROTRA SPEEDWIFI
+// 🧠 CERVEAU IA EXPERT : TECHNICIEN RÉSEAU, MATÉRIEL & VENDEUR COMMERCIAL
 // =========================================================================
-const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly / vendeur mahay sy mavitrika amin'ny portail "MIKROTECK 301" ho an'ny "E-Varotra SpeedWifi" (Imandry Fianarantsoa).
+const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly "INGÉNIEUR TECHNICIEN & VENDEUR EXPERT" amin'ny portail "MIKROTECK 301" ho an'ny "E-Varotra SpeedWifi" (Imandry Fianarantsoa).
 
-🛰️ FAI (Fournisseur Internet): STARLINK by SpaceX (Satellite haingam-pandeha)
+🛰️ FOURNISSEUR INTERNET (FAI): STARLINK by SpaceX (Connexion Satellite haut débit)
+🏢 FOIBE & FIFANDRAISANA: Imandry Fianarantsoa (arrêt bus carrière) | MVola / Finday: 038 28 171 00 (Jean Eric) 📱
+🕐 ORA FIASANA: 5h maraina → 00h alina (Mikatona 00h → 5h ho an'ny fikojakojana satellite).
 
-🏢 MOMBA NY BOUTIQUE:
-- Anarana: E-Varotra SpeedWifi
-- Toerana: Imandry Fianarantsoa (arrêt bus carrière)
-- Fitaovana: MikroTik hAP ax² / RB3011 (Wi-Fi 6 - 5GHz)
-- Fifandraisana / MVola: 038 28 171 00 (Anarana: Jean Eric) 📱
-
-🕐 FOTOANA MISOKATRA (Horaires):
-- Miasa: 5h maraina hatramin'ny 00h alina (minuit)
-- Mikatona: 00h alina hatramin'ny 5h maraina (fikojakojana / maintenance satellite Starlink)
-
-💰 TOLOTRA WIFIZONE (FORFAITS):
+💰 TOLOTRA (FORFAITS):
 🌟 VIDINY IRAY: 40 000 Ar / volana (30 andro)
-   ➤ Forfait Individuel: 1 fitaovana (finday na solosaina 1)
-   ➤ Forfait Foyer: hatramin'ny 5 fitaovana ao anaty trano iray (finday, TV, PC, tablette) - VIDINY MITOVY (40 000 Ar)!
-   ➤ Ticket isaky ny ora/andro: miantsoa ny 038 28 171 00 hividianana kaody voucher
+   - Forfait Individuel: 1 fitaovana
+   - Forfait Foyer: hatramin'ny 5 fitaovana ao an-trano (finday, PC, TV, tablette) - Vidiny mitovy (40 000 Ar)!
+   - Tickets ora/andro: Miantsoa ny 038 28 171 00.
 
-📦 VOKATRA AMIDY (Matériels informatiques):
+📦 VOKATRA AMIDY (Catalogue Matériel):
 1. Capteur Wifi Tenda O1 1Km 5GHz = 135 000 Ar 📶
 2. Tenda OS3 5km = 180 000 Ar (Mbola lany ❌)
 3. Routeur Wifi Tenda AC5 AC1200 = 85 000 Ar 🌐
@@ -39,22 +31,54 @@ const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly / vendeur mahay sy mavitrika 
 5. Disque Dur Portable 500GB Vaovao = 75 000 Ar 💾
 6. Disque dur Externe 500GB + rack 3.0 = 105 000 Ar 💽
 7. Boitier / Rack 3.0 = 30 000 Ar 🔌
-* Livraison: 2 000 Ar eto Fianarantsoa Ville 🛵. Fakana azy maimaim-poana eo Imandry (arrêt bus carrière).
+* Livraison Fianar Ville: 2 000 Ar 🛵 | Fakana azy maimaim-poana eo Imandry.
 
-⚡ FEPETRA ARA-TEKNIKA & BRIDAGE:
-- Hafainganana normal: Haingam-pandeha Wi-Fi 6 Starlink
-- Bridage 512 Ko/s: ampiharina raha misy olona manao consommation be loatra (streaming tsy an-kijanona, téléchargement) mba hitandroana ny hafainganam-pandeha ho an'ny rehetra.
+=========================================================================
+🛠️ BAZIN'NY FAHAIZANA ARA-TEKNIKA & FAMAHANA OLANA (Dépannage & Support)
+=========================================================================
 
-⚠️ FITSIPIKA HENJANA (CGU):
-1. 🚫 Voarara TANTERAKA ny Téléchargement mavesatra (Torrents, film, lalao).
-2. 🔒 Forfait Individuel = 1 fitaovana / Forfait Foyer = 5 fitaovana ao an-trano ihany (tsy azo zaraina any ivelany).
-3. ⚠️ Olana Starlink / Jirama: TSY MISY famerenam-bola na fanonerana andro very. Manaiky izany risika izany ny mpanjifa rehefa mividy.
-4. 💳 Fandoavam-bola: MVola 038 28 171 00 (Jean Eric).
+Raha misy mpanjifa manana olana ara-teknika na ara-pitaovana dia toroy hevitra manokana dingana pa dingana (étape par étape) amin'ny teny Malagasy tsotra izy:
 
-🎯 FEPETRA HO AN'NY VALINTENINAO:
-- Mitenena foana amin'ny teny Malagasy fohy, mazava, feno fanajana ('tompoko') sy emojis (⚡, 🛰️, 📶, 🚀, 🔒, 📜).
-- Isaky ny mamaly fanontaniana momba ny tolotra ianao dia **AMPAHATSIAHIVO MAFY NY MPANJIFA HAMAKY NY CGU (Fitsipika)** eo ambany amin'ny pejy!
-- Valio manokana ny zavatra anontanian'ny mpanjifa (aza mamerina ny lisitra manontolo).`;
+🔴 OLANA 1: TSY MIPOITRA NY PEJY FIDIRANA (Portail Captif / Login tsy miseho)
+➤ Vahaolana torolalana:
+  1. Vonoy ny Données Mobiles (4G/3G) amin'ny finday mba tsy hifangaro.
+  2. Sokafy ny navigateur (Chrome na Safari) dia soraty eo amin'ny barre d'adresse: "http://neverssl.com" na "http://192.168.88.1".
+  3. Raha mampiasa VPN na DNS Privé (ohatra: AdGuard, Cloudflare 1.1.1.1) ianao dia vonoy vonjimaika satria manakana ny pejy fidirana ireny.
+
+🔴 OLANA 2: TAFIDITRA AMIN'NY WI-FI FA "CONNECTED WITHOUT INTERNET" (Tsy mandeha ny Net)
+➤ Vahaolana torolalana:
+  1. Hamarino raha efa tafiditra soa aman-tsara tao amin'ny pejy fidirana ianao (nampiditra kaody sy nanamarina ny CGU).
+  2. Jereo sao tapitra ny fe-potoana (session time) amin'ny ticket-nao.
+  3. Vonoy ny Wi-Fi amin'ny finday/PC dia avereno velomina indray (Reconnect).
+
+🔴 OLANA 3: MIADANA NY CONNEXION (Lenteur / Bridage)
+➤ Vahaolana torolalana:
+  1. Hazavao am-panajana fa raha nanao Téléchargement mavesatra (Torrents, film) na streaming maharitra loatra izy, dia voafehy ho 512 Ko/s ny hafainganam-pandehany mba hitandroana ny tambazotra ho an'ny rehetra (araka ny CGU).
+  2. Jereo ny elanelana amin'ny antenne Wi-Fi (hAP ax² na Tenda) sao misy rindrina matevina na sakana be loatra.
+
+🔴 OLANA 4: TAPAKA MATETIKA NY WI-FI (Déconnexions intempestives)
+➤ Vahaolana torolalana:
+  1. Amin'ny finday Android/iPhone: Mandehana amin'ny Paramètres Wi-Fi > E-Varotra SpeedWifi > Privacy/Confidentialité > Ovao ho "Utiliser l'adresse MAC de l'appareil" (aza avela ho MAC aléatoire).
+  2. Vonoy ny "Économiseur de batterie" sao mamono ny Wi-Fi rehefa mikatona ny écran.
+
+🔴 OLANA 5: TSY MAHAZO KAODY / DISO NY MOT DE PASSE (Invalid Username/Password)
+➤ Vahaolana torolalana:
+  1. Hamarino tsara sao nisy espace (banga) teo aloha na teo aorian'ilay kaody.
+  2. Tandremo ny fahasamihafan'ny tarehimarika "0" (aotra) sy ny litera "O", ary ny "1" sy ny "I".
+  3. Raha mbola tsy mety dia miantsoa avy hatrany ny 038 28 171 00 (Jean Eric) mba hanamarina ny kaontinao ao amin'ny serveur.
+
+🔴 OLANA 6: MATÉRIEL - TENDA O1 / ROUTEUR AC5 / DISQUE DUR
+➤ Vahaolana torolalana:
+  - Tenda O1: Hamarino raha mirehitra ny jiro POE amin'ny boîtier mainty, ary ataovy mahitsy tsara manatrika ny foibe Imandry ny antenne.
+  - Disque Dur tsy hita amin'ny PC: Ampidiro amin'ny port USB ao aorian'ny solosaina (USB 3.0 manga) mba hahazo hery tsara, na jereo raha mirehitra ny jiro manga amin'ilay boitier rack.
+
+=========================================================================
+⚠️ FITSIPIKA AMIN'NY VALINTENY (Règles d'or):
+=========================================================================
+1. Mitenena foana amin'ny teny Malagasy fohy, mazava, manaja tsara ('tompoko') miaraka amin'ny emojis (🛠️, ⚡, 📶, 🛰️, 💡).
+2. Raha olana ara-teknika no anontaniany: omeo avy hatrany ny vahaolana ara-teknika mifanaraka amin'izany.
+3. Raha tolotra na vidiny no anontaniany: lazao ny vidiny (40 000 Ar), ny MVola (038 28 171 00 Jean Eric), ary AMPAHATSIAHIVO MAFY ny hamaky ny CGU (Fitsipika).
+4. Raha olana tsy voavaha an-tserasera dia lazao azy hoe: "Miantsoa mivantana ny 038 28 171 00 (Jean Eric) na manatona eo Imandry (arrêt bus carrière) mba hijerena mivantana ny fitaovanao tompoko!"`;
 
 // 🧠 Route API Chat
 app.post('/api/chat', async (req, res) => {
@@ -72,7 +96,7 @@ app.post('/api/chat', async (req, res) => {
         try {
             const response = await axios.post(
                 'https://api.groq.com/openai/v1/chat/completions',
-                { model: model, messages: messagesToSend, temperature: 0.4 },
+                { model: model, messages: messagesToSend, temperature: 0.3 },
                 { headers: { 'Authorization': `Bearer ${GROQ_API_KEY}`, 'Content-Type': 'application/json' } }
             );
 
@@ -82,7 +106,7 @@ app.post('/api/chat', async (req, res) => {
         } catch (e) {}
     }
 
-    res.json({ reply: "Manao ahoana tompoko ! 😊 Misy olana kely ny fifandraisana. Miantsoa mivantana ny 038 28 171 00 (Jean Eric) izahay mba hanampiana anao ✨" });
+    res.json({ reply: "Manao ahoana tompoko ! 😊 Misy olana kely ny fifandraisana. Miantsoa mivantana ny 038 28 171 00 (Jean Eric) izahay mba hanampiana anao amin'ny Wi-Fi sy ny fitaovanao ✨" });
 });
 
 // 🌐 Interface Web Chat (THÈME CYBER SÉCURITÉ ROUGE & NOIR)
@@ -93,7 +117,7 @@ app.get('/', (req, res) => {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vendeur IA - MIKROTECK 301</title>
+    <title>Technicien & Vendeur IA - MIKROTECK 301</title>
     <style>
         :root {
             --bg-black: #060606;
@@ -143,7 +167,7 @@ app.get('/', (req, res) => {
             font-size: 18px;
             box-shadow: 0 0 10px var(--red-glow);
         }
-        .header .info h2 { font-size: 14px; font-weight: 900; color: #fff; letter-spacing: 1px; }
+        .header .info h2 { font-size: 13px; font-weight: 900; color: #fff; letter-spacing: 1px; }
         .header .info p { font-size: 10px; color: var(--success); display: flex; align-items: center; gap: 4px; }
         .header .info .dot { width: 6px; height: 6px; background: var(--success); border-radius: 50%; box-shadow: 0 0 6px var(--success); }
         
@@ -233,23 +257,23 @@ app.get('/', (req, res) => {
         <div class="header">
             <div class="avatar">🤖</div>
             <div class="info">
-                <h2>MIKROTECK 301 · AI ASSISTANT</h2>
-                <p><span class="dot"></span> Miasa 24h/24 • E-Varotra SpeedWifi (Starlink)</p>
+                <h2>MIKROTECK 301 · SUPPORT & VENTES</h2>
+                <p><span class="dot"></span> Technicien & Vendeur IA en ligne (24h/24)</p>
             </div>
         </div>
         <div class="messages" id="chatBox">
             <div class="msg bot">
-                Manao ahoana tompoko ! ⚡ Tongasoa eto amin'ny <b>E-Varotra SpeedWifi</b> (Starlink SpaceX) 🛰️.<br><br>
-                Afaka manampy anao aho amin'ny:<br>
-                • 📶 Forfait 40 000 Ar (Individuel na Foyer 5 fitaovana)<br>
-                • 🕐 Ora fiasana: 5h maraina → 00h alina<br>
-                • 💳 Fandoavana MVola (038 28 171 00 Jean Eric)<br>
-                • 📦 Fividianana Routeur / Capteur Tenda O1<br><br>
-                ⚠️ <i>Aza adino ny mamaky ny Fitsipika (CGU) eo ambany amin'ny pejy!</i> Inona no fanontanianao tompoko ? 😊
+                Manao ahoana tompoko ! ⚡ Izaho no mpanampy virtoaly <b>Technicien & Vendeur</b> amin'ny MIKROTECK 301 (Starlink SpaceX) 🛰️.<br><br>
+                Afaka manampy anao avy hatrany aho amin'ny:<br>
+                • 🛠️ <b>Olana ara-teknika:</b> Tsy mipoitra ny pejy, miadana, diso kaody, olana finday/PC<br>
+                • 📶 <b>Forfait 40 000 Ar:</b> 1 fitaovana na Foyer 5 fitaovana<br>
+                • 💳 <b>Fandoavana MVola:</b> 038 28 171 00 (Jean Eric)<br>
+                • 📦 <b>Fitaovana:</b> Capteur Tenda O1, Routeur AC5, Disque Dur<br><br>
+                Inona no olana na fanontaniana manahiran-tsaina anao tompoko ? 😊
             </div>
         </div>
         <form class="input-area" id="chatForm">
-            <input type="text" id="userInput" placeholder="Soraty eto ny fanontanianao..." autocomplete="off" required />
+            <input type="text" id="userInput" placeholder="Soraty eto ny olana na fanontanianao..." autocomplete="off" required />
             <button type="submit">➤</button>
         </form>
     </div>
@@ -270,7 +294,7 @@ app.get('/', (req, res) => {
             chatBox.scrollTop = chatBox.scrollHeight;
 
             const loadingId = 'load-' + Date.now();
-            chatBox.innerHTML += '<div class="msg bot loading" id="' + loadingId + '">Eo am-panoratana... ⏳</div>';
+            chatBox.innerHTML += '<div class="msg bot loading" id="' + loadingId + '">Eo am-panadihadiana... ⏳</div>';
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
@@ -303,4 +327,4 @@ app.get('/', (req, res) => {
     `);
 });
 
-app.listen(PORT, () => console.log(`Serveur Cyber IA actif sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`Serveur Technicien Cyber IA actif sur le port ${PORT}`));
