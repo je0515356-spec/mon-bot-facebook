@@ -7,28 +7,20 @@ const PAGE_ACCESS_TOKEN = process.env.PAGE_ACCESS_TOKEN;
 const VERIFY_TOKEN = process.env.VERIFY_TOKEN || "382817100Eric.";
 const GROQ_API_KEY = process.env.GEMINI_API_KEY ? process.env.GEMINI_API_KEY.trim() : "";
 
-// 🧠 MÉMOIRE DE CONVERSATION (Retient les échanges précédents)
+// 🧠 MÉMOIRE DE CONVERSATION (Retient les détails du client)
 const conversationMemory = {};
 
 // =========================================================================
-// 📝 PROMPT COMMERCIAL COMPLET (MVOLA JEAN ERIC + POINT DE RETRAIT IMANDRY)
+// 📝 PROMPT COMMERCIAL STRUCTURE EN ETAPES (VENTE EN LIGNE + RETRAIT/LIVRAISON)
 // =========================================================================
-const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra amin'ny "E-Varotra Informatique" (Boutique de Vente en Ligne eto Madagasikara).
+const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra tena mahay sy milamina tsara amin'ny "E-Varotra Informatique" (Boutique de Vente en Ligne eto Madagasikara).
 
-🏢 MOMBA NY BOUTIQUE SY NY TOERANA:
-- Point de Récupération (Fakana entana): Imandry Fianarantsoa (arrêt bus carrière).
-  ⚠️ FITSIPKA LEHIBE: Raha ho avy haka entana eo Imandry ny mpanjifa, lazao azy hoe: "Rehefa tonga eo amin'ny arrêt bus carrière Imandry ianao dia miantsoa avy hatrany ny 038 28 171 00 📞 mba handraisana anao sy hanaovana fitsapana (test) ny entana!".
-- Livraison à domicile: 2 000 Ar eto Fianarantsoa Ville 🛵. Mandefa any amin'ny province amin'ny fiara taxi-brousse / poste / transport 📦.
+🏢 MOMBA NY BOUTIQUE SY NY FANDOAVAM-BOLA:
+- Toerana fiaingana / Point de Récupération: Imandry Fianarantsoa (arrêt bus carrière).
+- Finday / MVola: 038 28 171 00 (Anarana: Jean Eric) 📲. Misy Orange Money, Airtel Money koa.
+- Garantie & SAV: Entana azo tsapaina sy testena tsara eo no ho eo alohan'ny handoavana vola, ary misy SAV manampy amin'ny fampiasana azy 🛡️.
 
-📱 FANDOAVAM-BOLA (Paiement):
-- MVola: 038 28 171 00 (Anarana: Jean Eric) 📲.
-- Misy koa Orange Money, Airtel Money, na handoavana rehefa raisina ny entana eto Fianarantsoa.
-
-🛡️ ANTOKA SY SERVICE APRÈS-VENTE (Garantie & SAV):
-- Entana vaovao sy azo antoka. Afaka tsapaina sy testena tsara eo no ho eo alohan'ny handoavana vola 👍.
-- Misy SAV sy fanampiana ara-teknika (aide au paramétrage) aorian'ny fividianana 🛠️.
-
-📦 CATALOGUE VOKATRA:
+📦 CATALOGUE PRODUITS:
 1. Capteur Wifi Tenda O1 1Km 5GHz = 135 000 Ar 📶
 2. Tenda OS3 5km 5GHz = 180 000 Ar (Mbola lany / En rupture ❌)
 3. Routeur Wifi Tenda AC5 AC1200 = 85 000 Ar 🌐
@@ -38,20 +30,25 @@ const SYSTEM_PROMPT = `Ianao dia mpanampy virtoaly mpivarotra amin'ny "E-Varotra
 7. RAM & SSD = Miandry arrivage ⏳
 8. Pack Tenda 1km + Routeur Dual Bande = 215 000 Ar ⚡
 
-⚠️ FITSIPKA MAFY HO AN'NY VALINTENY:
-1. VALIO FOHY SY MAZAVA ny fanontanian'ny mpanjifa (aza mamerina ny lisitra rehetra).
-2. Mampiasà Emojis (😊, 🛵, 📦, 📞, 📶, 🛡️).
+📋 FOMBA FIASANA SY DINGANA ARAHINA AMIN'NY VAROTRA (TUNNEL DE VENTE):
 
-🚨 VALIDATION DE COMMANDE:
-- Raha efa nanome ny anarany sy ny findainy ny mpanjifa: AZA MANONTANY AN'IREO INTSONY !
-- Manamafisa avy hatrany ny kaomandy:
-  1. "✅ Voaray soa aman-tsara ny kaomandinao tompoko!"
-  2. Récapitulatif mazava: Vokatra + Livraison = TOTALIN'NY VOLA.
-  3. Raha livraison: hiantso azy ny livreur alohan'ny hiaingana.
-  4. Raha MVola: 038 28 171 00 (Jean Eric).`;
+🔹 DINGANA 1: FANONTANIANA PRODUIT
+- Valio fohy sy mazava ny vidin'ilay entana anontaniany miaraka amin'ny emojis.
+- Anontanio azy avy hatrany: "Haterina amin'ny livraison eto Fianarantsoa ville ve (2 000 Ar) 🛵 sa ho avy haka mivantana eo Imandry (Maimaim-poana / Gratuit) 📍 sa alefa any amin'ny Province 📦?"
+
+🔹 DINGANA 2: ARAKA NY SAFIDIN'NY MPANJIFA
+- RAHA HIFIDY "LIVRAISON": Anontanio ny: 1. Quartier/Adiresy mazava 2. Anarana feno 3. Laharana finday. (Total = Vidin'entana + 2 000 Ar).
+- RAHA HIFIDY "HAKA EO IMANDRY": Lazao azy mazava hoe: "Maimaim-poana ny fakana azy eo Imandry! Rehefa tonga eo amin'ny arrêt bus carrière Imandry ianao dia miantsoa avy hatrany ny 038 28 171 00 (Jean Eric) 📞 mba handraisana anao sy hitsapana (test) ny entana eo no ho eo."
+- RAHA HIFIDY "PROVINCE": Anontanio ny Tanàna misy azy sy ny fiara/coopérative handefasana azy. Ny fandoavam-bola dia alohan'ny fandefasana amin'ny MVola 038 28 171 00 (Jean Eric).
+
+🔹 DINGANA 3: FANAMAFISANA NY KAOMANDY (VALIDATION)
+- Raha efa voavaly ny fomba fakana azy sy ny mombamomba azy:
+  1. Lazao: "✅ Voaray soa aman-tsara ny kaomandinao tompoko!"
+  2. Manaova Récapitulatif mazava: Entana + Livraison = TOTALIN'NY VOLA.
+  3. Ampahatsiahivo fa hiantso azy ny livreur na ny mpivarotra amin'ny 038 28 171 00 alohan'ny fahatongavany.`;
 // =========================================================================
 
-// 1. Vérification Webhook
+// 1. Vérification Facebook Webhook
 app.get('/webhook', (req, res) => {
     if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === VERIFY_TOKEN) {
         console.log("WEBHOOK_VERIFIE");
@@ -73,9 +70,9 @@ app.post('/webhook', async (req, res) => {
                     const sender_psid = event.sender ? event.sender.id : null;
 
                     if (event.message && event.message.text && !event.message.is_echo && sender_psid) {
-                        console.log(`--- 📩 MESSAGE MESSENGER REÇU :`, event.message.text);
+                        console.log(`--- 📩 MESSAGE CLIENT [${sender_psid}] :`, event.message.text);
                         const botResponse = await callGroqAIWithMemory(sender_psid, event.message.text);
-                        console.log("--- 🤖 REPONSE ENVOYÉE :", botResponse);
+                        console.log("--- 🤖 REPONSE IA :", botResponse);
                         await sendTextMessage(sender_psid, botResponse);
                     }
                 }
@@ -91,15 +88,14 @@ app.post('/webhook', async (req, res) => {
                             const userComment = val.message;
                             const sender_id = val.from ? val.from.id : null;
 
-                            console.log("--- 💬 NOUVEAU COMMENTAIRE DÉTECTÉ :", userComment);
+                            console.log("--- 💬 NOUVEAU COMMENTAIRE :", userComment);
 
-                            // Répondre uniquement si ce n'est pas la page elle-même
                             if (sender_id && sender_id !== entry.id) {
                                 // 1. Réponse publique
                                 await replyPublicComment(comment_id, "Manao ahoana tompoko ! 😊 Nandefasanay hafatra miafina (MP) ianao izao miaraka amin'ny antsipiriany sy ny vidiny 📩✨");
                                 
                                 // 2. Envoi Message Privé (Auto-DM)
-                                const promptComment = `Nisy mpanjifa naneho hevitra hoe: "${userComment}". Valio fohy amin'ny fomba fivarotana vente en ligne, omeo ny vidiny ary lazao ny momba an'i Imandry Fianarantsoa.`;
+                                const promptComment = `Mpanjifa naneho hevitra hoe: "${userComment}". Valio araka ny dingana 1 amin'ny fivarotana vente en ligne.`;
                                 const privateReplyText = await callGroqAIWithMemory(`comment_${comment_id}`, promptComment);
                                 await sendPrivateReply(comment_id, privateReplyText);
                             }
@@ -114,7 +110,7 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA Groq avec Mémoire
+// 3. IA Groq avec Mémoire de discussion
 async function callGroqAIWithMemory(userId, userPrompt) {
     if (!conversationMemory[userId]) {
         conversationMemory[userId] = [];
@@ -122,8 +118,8 @@ async function callGroqAIWithMemory(userId, userPrompt) {
 
     conversationMemory[userId].push({ role: 'user', content: userPrompt });
 
-    if (conversationMemory[userId].length > 6) {
-        conversationMemory[userId] = conversationMemory[userId].slice(-6);
+    if (conversationMemory[userId].length > 8) {
+        conversationMemory[userId] = conversationMemory[userId].slice(-8);
     }
 
     const messagesToSend = [
@@ -161,7 +157,7 @@ async function callGroqAIWithMemory(userId, userPrompt) {
     return "Manao ahoana tompoko ! 😊 Inona no entana ilainao fanazavana ato amin'ny E-Varotra Informatique ? ✨";
 }
 
-// 4. Fonctions d'envois Facebook
+// 4. Envois Facebook
 async function sendTextMessage(recipientId, text) {
     try {
         await axios.post(`https://graph.facebook.com/v19.0/me/messages?access_token=${PAGE_ACCESS_TOKEN}`, {
@@ -177,7 +173,7 @@ async function replyPublicComment(commentId, message) {
             message: message
         });
         console.log("✅ Réponse publique sous commentaire envoyée !");
-    } catch (e) { console.error("Erreur Commentaire Public:", e.response ? e.response.data : e.message); }
+    } catch (e) { console.error("Erreur Commentaire:", e.response ? e.response.data : e.message); }
 }
 
 async function sendPrivateReply(commentId, text) {
@@ -186,7 +182,7 @@ async function sendPrivateReply(commentId, text) {
             recipient: { comment_id: commentId },
             message: { text: text }
         });
-        console.log("✅ Message Privé (Auto-DM) envoyé depuis le commentaire !");
+        console.log("✅ Message Privé (Auto-DM) envoyé !");
     } catch (e) { console.error("Erreur Private Reply:", e.response ? e.response.data : e.message); }
 }
 
