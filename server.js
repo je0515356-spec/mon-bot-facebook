@@ -39,7 +39,7 @@ app.post('/webhook', async (req, res) => {
     }
 });
 
-// 3. IA OpenRouter (Modèles 100% Gratuits)
+// 3. IA OpenRouter avec En-têtes Obligatoires
 async function callAI(userPrompt) {
     const systemPrompt = `Ianao dia mpanampy virtoaly mpivarotra mahay sy mahalala fomba amin'ny pejy Facebook eto Madagasikara.
 Fitsipika:
@@ -47,13 +47,13 @@ Fitsipika:
 - Vokatra: T-shirt = 25 000 Ar, Patalloha Jean = 45 000 Ar, Kiraro = 60 000 Ar.
 - Fandoavam-bola: MVola, Orange Money, na handoavana rehefa tonga ny entana (Paiement à la livraison).
 - Livraison: 3 000 Ar eto Antananarivo.
-- Raha manontany patalloha na vidiny ny mpanjifa dia valio mazava tsara ary anontanio ny taille sy ny adiresiny.`;
+- Valio mazava tsara ny fanontanian'ny mpanjifa ary anontanio ny anarany sy ny findainy raha hividy izy.`;
 
-    // Liste des modèles gratuits sur OpenRouter
     const freeModels = [
+        'deepseek/deepseek-chat:free',
         'google/gemini-2.0-flash-exp:free',
-        'deepseek/deepseek-r1:free',
-        'meta-llama/llama-3.1-8b-instruct:free'
+        'qwen/qwen-2.5-72b-instruct:free',
+        'mistralai/mistral-7b-instruct:free'
     ];
 
     for (let modelName of freeModels) {
@@ -70,6 +70,8 @@ Fitsipika:
                 {
                     headers: {
                         'Authorization': `Bearer ${API_KEY}`,
+                        'HTTP-Referer': 'https://render.com', // Obligatoire pour OpenRouter Gratuit
+                        'X-Title': 'FacebookBotMadagascar',   // Obligatoire pour OpenRouter Gratuit
                         'Content-Type': 'application/json'
                     }
                 }
@@ -79,11 +81,11 @@ Fitsipika:
                 return response.data.choices[0].message.content;
             }
         } catch (error) {
-            console.log(`Modèle ${modelName} indisponible, essai du suivant...`);
+            console.log(`Erreur modèle ${modelName} :`, error.response ? error.response.data : error.message);
         }
     }
 
-    return "Manao ahoana tompoko ! Misy patalloha tsara kalitao tokoa ato aminay amin'ny vidiny 45 000 Ar. Inona ny taille tadiavinao ?";
+    return "Manao ahoana tompoko ! Misy entana maro mahaliana ato aminay. Inona no tadiavinao ?";
 }
 
 // 4. Envoi Messenger
@@ -93,7 +95,7 @@ async function sendTextMessage(recipientId, text) {
             recipient: { id: recipientId },
             message: { text: text }
         });
-        console.log("Message envoyé au client sur Messenger !");
+        console.log("Message envoyé avec succès !");
     } catch (e) {
         console.error("Erreur Messenger:", e.response ? e.response.data : e.message);
     }
